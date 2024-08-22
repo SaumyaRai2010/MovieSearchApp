@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import debounce from "lodash/debounce";
 import Modal from "./components/Modal";
@@ -13,11 +13,20 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [showFavorites, setShowFavorites] = useState(false);
+
+  // Fetch favorites from local storage on mount
+  useEffect(() => {
+    const storedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
+    setFavorites(storedFavorites);
+  }, []);
 
   const debouncedFetchMovies = useCallback(
     debounce(async (query, page = 1) => {
-      setLoading(true); // Set loading to true before fetching
+      setLoading(true);
+      setShowFavorites(false);
       try {
         const response = await axios.get(
           `https://www.omdbapi.com/?apikey=${API_KEY}&s=${query}&page=${page}`
@@ -27,7 +36,7 @@ function App() {
       } catch (error) {
         console.error("Error fetching movies:", error);
       } finally {
-        setLoading(false); // Set loading to false after fetching
+        setLoading(false);
       }
     }, 1000),
     []
@@ -47,7 +56,7 @@ function App() {
   };
 
   const fetchMovieDetails = async (id) => {
-    setLoading(true); // Set loading to true before fetching
+    setLoading(true);
     try {
       const response = await axios.get(
         `https://www.omdbapi.com/?apikey=${API_KEY}&i=${id}`
@@ -57,7 +66,7 @@ function App() {
     } catch (error) {
       console.error("Error fetching movie details:", error);
     } finally {
-      setLoading(false); // Set loading to false after fetching
+      setLoading(false);
     }
   };
 
@@ -68,6 +77,28 @@ function App() {
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
+  };
+
+  const addToFavorites = (movie) => {
+    const updatedFavorites = [...favorites, movie];
+    setFavorites(updatedFavorites);
+    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+  };
+
+  const removeFromFavorites = (movieId) => {
+    const updatedFavorites = favorites.filter(
+      (movie) => movie.imdbID !== movieId
+    );
+    setFavorites(updatedFavorites);
+    localStorage.setItem("favorites", JSON.stringify(updatedFavorites));
+  };
+
+  const isFavorite = (movieId) => {
+    return favorites.some((movie) => movie.imdbID === movieId);
+  };
+
+  const toggleFavoritesVisibility = () => {
+    setShowFavorites(!showFavorites);
   };
 
   return (
@@ -115,17 +146,68 @@ function App() {
             : "border-gray-300 bg-white text-black"
         } rounded-lg mb-6 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-600`}
       />
-      {loading ? ( // Show loader while fetching data
+      <button
+        onClick={toggleFavoritesVisibility}
+        className={`w-full py-2 mb-6 text-lg font-medium text-center rounded-lg ${
+          darkMode ? "bg-gray-700 text-white" : "bg-gray-200 text-black"
+        }`}
+      >
+        {showFavorites ? "Hide Favorites" : "Show Favorites"}
+      </button>
+
+      {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="w-12 h-12 border-4 border-gray-700 border-t-transparent border-solid rounded-full animate-spin"></div>
         </div>
+      ) : showFavorites ? (
+        favorites.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {favorites.map((movie) => (
+                <div
+                  key={movie.imdbID}
+                  className="cursor-pointer p-4 rounded-2xl shadow-2xl hover:shadow-indigo-500/40 transition-shadow"
+                  onClick={() => fetchMovieDetails(movie.imdbID)}
+                >
+                  <img
+                    src={movie.Poster}
+                    alt={movie.Title}
+                    className="w-full h-auto rounded-md mb-2"
+                  />
+                  <h2
+                    className={`text-lg md:text-xl lg:text-2xl font-semibold text-center ${
+                      darkMode ? "text-white" : "text-black"
+                    }`}
+                  >
+                    {movie.Title} ({movie.Year})
+                  </h2>
+                </div>
+              ))}
+            </div>
+            {isModalOpen && (
+              <Modal
+                movie={selectedMovie}
+                onClose={closeModal}
+                darkMode={darkMode}
+              />
+            )}
+          </>
+        ) : (
+          <p
+            className={`text-center text-lg font-medium ${
+              darkMode ? "text-white" : "text-black"
+            }`}
+          >
+            No Favorites Added!!
+          </p>
+        )
       ) : movies && movies.length > 0 ? (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {movies.map((movie) => (
               <div
                 key={movie.imdbID}
-                className="cursor-pointer p-4 rounded-2xl shadow-2xl hover:shadow-indigo-500/40 transition-shadow"
+                className="relative cursor-pointer p-4 rounded-2xl shadow-2xl hover:shadow-indigo-500/40 transition-shadow"
                 onClick={() => fetchMovieDetails(movie.imdbID)}
               >
                 <img
@@ -140,6 +222,21 @@ function App() {
                 >
                   {movie.Title} ({movie.Year})
                 </h2>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isFavorite(movie.imdbID)) {
+                      removeFromFavorites(movie.imdbID);
+                    } else {
+                      addToFavorites(movie);
+                    }
+                  }}
+                  className={`absolute top-2 right-2 p-2 rounded-full ${
+                    isFavorite(movie.imdbID) ? "bg-red-500" : "bg-gray-500"
+                  } text-white`}
+                >
+                  <i className={`fas fa-star`}></i>
+                </button>
               </div>
             ))}
           </div>
@@ -150,7 +247,11 @@ function App() {
                 currentPage === 1 ? "hidden" : ""
               }`}
             >
-              <i className={`fas fa-chevron-left ${darkMode ? 'text-white' : 'text-black'}`}></i>
+              <i
+                className={`fas fa-chevron-left ${
+                  darkMode ? "text-white" : "text-black"
+                }`}
+              ></i>
             </button>
             <span
               className={`px-4 py-2 mx-2 ${
@@ -161,11 +262,15 @@ function App() {
             </span>
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              className={`px-4 py-2 mx-2 bg-gray-800 text-white rounded ${
-                totalResults <= 10 ? "hidden" : ""
-              }`}
+              className={`px-4 py-2 mx-2 ${
+                darkMode ? "bg-gray-800" : "bg-gray-200"
+              } text-white rounded ${totalResults <= 10 ? "hidden" : ""}`}
             >
-              <i className={`fas fa-chevron-right ${darkMode ? 'text-white' : 'text-black'}`}></i>
+              <i
+                className={`fas fa-chevron-right ${
+                  darkMode ? "text-white" : "text-black"
+                }`}
+              ></i>
             </button>
           </div>
           {isModalOpen && (
