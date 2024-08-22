@@ -23,6 +23,7 @@ function App() {
     setFavorites(storedFavorites);
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedFetchMovies = useCallback(
     debounce(async (query, page = 1) => {
       setLoading(true);
@@ -213,7 +214,7 @@ function App() {
               darkMode ? "text-white" : "text-black"
             }`}
           >
-            No Favorites Added!!
+            No Favorites Added!
           </p>
         )
       ) : movies && movies.length > 0 ? (
@@ -302,7 +303,7 @@ function App() {
             darkMode ? "text-white" : "text-black"
           }`}
         >
-          No Results Were Found!!
+          No Results Were Found!
         </p>
       )}
     </div>
