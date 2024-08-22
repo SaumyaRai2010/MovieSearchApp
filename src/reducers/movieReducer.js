@@ -1,11 +1,10 @@
-// src/reducers/movieReducer.js
 import {
   SET_MOVIES,
   SET_SEARCH_TERM,
   SET_CURRENT_PAGE,
   SET_TOTAL_RESULTS,
   SET_LOADING,
-  TOGGLE_DARK_MODE
+  TOGGLE_DARK_MODE,
 } from "../actions/actionTypes";
 
 const initialState = {
@@ -20,7 +19,6 @@ const initialState = {
 };
 
 const movieReducer = (state = initialState, action) => {
-
   switch (action.type) {
     case SET_MOVIES:
       return {
