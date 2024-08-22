@@ -166,7 +166,7 @@ function App() {
               {favorites.map((movie) => (
                 <div
                   key={movie.imdbID}
-                  className="cursor-pointer p-4 rounded-2xl shadow-2xl hover:shadow-indigo-500/40 transition-shadow"
+                  className="relative cursor-pointer p-4 rounded-2xl shadow-2xl hover:shadow-indigo-500/40 transition-shadow"
                   onClick={() => fetchMovieDetails(movie.imdbID)}
                 >
                   <img
@@ -181,6 +181,21 @@ function App() {
                   >
                     {movie.Title} ({movie.Year})
                   </h2>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isFavorite(movie.imdbID)) {
+                        removeFromFavorites(movie.imdbID);
+                      } else {
+                        addToFavorites(movie);
+                      }
+                    }}
+                    className={`absolute top-2 right-2 p-2 rounded-full ${
+                      isFavorite(movie.imdbID) ? "bg-red-500" : "bg-gray-500"
+                    } text-white`}
+                  >
+                    <i className={`fas fa-star`}></i>
+                  </button>
                 </div>
               ))}
             </div>
